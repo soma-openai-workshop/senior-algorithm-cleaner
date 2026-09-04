@@ -256,7 +256,7 @@ OpenAI의 현재 Responses API 공식 입력은 텍스트, 이미지와 파일�
 지원하지 않는다고 명시한다. 따라서 v1에서 OpenAI를 영상 judge나 Gemini 결과 재판정 단계로
 사용하지 않는다. 향후 공식 영상 입력이 지원돼도 별도 SDD와 eval 없이 어댑터를 교체하지 않는다.
 
-출처: [OpenAI Responses API](https://developers.openai.com/api/reference/resources/responses/methods/create)
+출처: [OpenAI Responses API](https://developers.openai.com/api/reference/cli/resources/responses/methods/create)
 
 ## 5. API 데이터와 파생 지표 정책
 
