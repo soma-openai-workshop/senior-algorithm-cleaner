@@ -1,6 +1,6 @@
 'use client'
 
-import { CalendarBlank, FirstAid, Trash, Warning, X } from '@phosphor-icons/react'
+import { CalendarBlank, CheckCircle, FirstAid, Trash, Warning, X } from '@phosphor-icons/react'
 import Image from 'next/image'
 import { useState } from 'react'
 
@@ -44,8 +44,11 @@ export function RiskResultList({
   const [selected, setSelected] = useState<Set<string>>(() => new Set())
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null)
   const [execution, setExecution] = useState<ExecutionResult | null>(null)
+  const [unsubscribed, setUnsubscribed] = useState<Set<string>>(() => new Set())
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const visibleItems = items.filter((item) => !unsubscribed.has(item.channelId))
+
   function toggle(channelId: string) {
     setSelected((current) => {
       const next = new Set(current)
@@ -87,6 +90,13 @@ export function RiskResultList({
       if (!response.ok) throw new Error(result.error?.message ?? '구독 해제를 완료하지 못했습니다.')
       const completed = result as ExecutionResult
       setExecution(completed)
+      setUnsubscribed((current) => {
+        const next = new Set(current)
+        completed.results
+          .filter((item) => item.status === 'success')
+          .forEach((item) => next.add(item.channelId))
+        return next
+      })
       setSelected(
         new Set(
           completed.results
@@ -114,7 +124,7 @@ export function RiskResultList({
         점수가 높아도 자동 선택하지 않습니다. 직접 확인하고 고르세요.
       </p>
       <div className="risk-card-list">
-        {items.map((item) => (
+        {visibleItems.map((item) => (
           <article className={`risk-card risk-card--${item.riskLevel}`} key={item.channelId}>
             <label className="risk-card__select">
               <input
@@ -170,6 +180,12 @@ export function RiskResultList({
             </p>
           </article>
         ))}
+        {visibleItems.length === 0 && execution?.successCount ? (
+          <p className="success-banner" role="status">
+            <CheckCircle aria-hidden size={28} weight="fill" /> 선택한 채널의 구독을 모두
+            해제했습니다.
+          </p>
+        ) : null}
       </div>
       {error && <p className="error-banner">{error}</p>}
       {execution && (

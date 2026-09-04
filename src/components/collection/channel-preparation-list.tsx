@@ -14,20 +14,21 @@ export type ChannelPreparation = {
 }
 
 export function ChannelPreparationList({ items }: { items: ChannelPreparation[] }) {
+  const candidates = items.filter((item) => item.candidate)
   return (
     <section className="result-section" aria-labelledby="prepared-title">
       <div className="section-heading result-heading">
         <div>
           <p className="eyebrow">분석 준비 결과</p>
-          <h2 id="prepared-title">건강정보 후보 채널</h2>
+          <h2 id="prepared-title">건강정보 후보 채널 {candidates.length}개</h2>
         </div>
         <span className="safe-badge">룰 기반 1차 선별 · 위험도 점수 아님</span>
       </div>
       <p className="result-explainer">
-        채널 이름·설명과 최신 영상 제목·설명에서 건강 관련 표현을 폭넓게 찾았습니다.
+        전체 구독 중 채널 이름·설명과 최신 영상에서 건강 관련 표현이 확인된 채널입니다.
       </p>
       <div className="subscription-grid">
-        {items.map((item) => (
+        {candidates.map((item) => (
           <article className="candidate-card" key={item.channelId}>
             {item.thumbnailUrl ? (
               <Image
@@ -67,6 +68,9 @@ export function ChannelPreparationList({ items }: { items: ChannelPreparation[] 
             </div>
           </article>
         ))}
+        {candidates.length === 0 && (
+          <p className="empty-panel">건강정보 후보 채널을 찾지 못했습니다.</p>
+        )}
       </div>
     </section>
   )

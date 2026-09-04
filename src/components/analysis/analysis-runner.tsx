@@ -35,7 +35,8 @@ export function AnalysisRunner({
         if (active) setItems(results.items)
       })
       .catch((cause: unknown) => {
-        if (active) setError(cause instanceof Error ? cause.message : '분석 결과를 불러오지 못했습니다.')
+        if (active)
+          setError(cause instanceof Error ? cause.message : '분석 결과를 불러오지 못했습니다.')
       })
     return () => {
       active = false

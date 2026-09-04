@@ -2,7 +2,6 @@
 
 import { CheckCircle, ListMagnifyingGlass, Warning } from '@phosphor-icons/react'
 import { useState } from 'react'
-import { SubscriptionList, type SafeSubscription } from './subscription-list'
 import { ChannelPreparationList, type ChannelPreparation } from './channel-preparation-list'
 import { DisconnectControl } from './disconnect-control'
 import { ProgressPanel, type ProgressJob } from './progress-panel'
@@ -23,7 +22,6 @@ type JobView = ProgressJob & {
 
 export function CollectionRunner({ csrfToken }: { csrfToken: string }) {
   const [job, setJob] = useState<JobView | null>(null)
-  const [items, setItems] = useState<SafeSubscription[]>([])
   const [prepared, setPrepared] = useState<ChannelPreparation[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -59,7 +57,7 @@ export function CollectionRunner({ csrfToken }: { csrfToken: string }) {
         setJob(current)
       }
       if (['completed', 'partial'].includes(current.status)) {
-        await Promise.all([loadAll(current.id), loadPrepared(current.id)])
+        await loadPrepared(current.id)
       }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : '구독 목록을 가져오지 못했습니다.')
@@ -100,25 +98,6 @@ export function CollectionRunner({ csrfToken }: { csrfToken: string }) {
     setPrepared(collected)
   }
 
-  async function loadAll(jobId: string) {
-    const collected: SafeSubscription[] = []
-    let cursor: string | null = null
-    do {
-      const url = new URL(`/api/collection-jobs/${jobId}/subscriptions`, window.location.origin)
-      url.searchParams.set('limit', '100')
-      if (cursor) url.searchParams.set('cursor', cursor)
-      const response = await fetch(url)
-      if (!response.ok) throw new Error('구독 목록을 표시하지 못했습니다.')
-      const page = (await response.json()) as {
-        items: SafeSubscription[]
-        nextCursor: string | null
-      }
-      collected.push(...page.items)
-      cursor = page.nextCursor
-    } while (cursor)
-    setItems(collected)
-  }
-
   const done = job && ['completed', 'partial'].includes(job.status)
 
   return (
@@ -148,7 +127,6 @@ export function CollectionRunner({ csrfToken }: { csrfToken: string }) {
           {error}
         </p>
       )}
-      {done && <SubscriptionList items={items} />}
       {done && <ChannelPreparationList items={prepared} />}
       {done && prepared.some((item) => item.candidate) && job && (
         <AnalysisRunner collectionJobId={job.id} csrfToken={csrfToken} />
