@@ -31,4 +31,4 @@ npm run dev
 2. 최근 30일 `myactivity.youtube` 아카이브 요청
 3. 발급된 job ID로 작업 상태 조회
 
-OAuth redirect URI는 `http://localhost:3000/api/auth/portability/callback`입니다. Data Portability scope는 일반 YouTube Data API scope와 같은 승인 요청에 섞지 않습니다. `.env.local`은 Git에서 제외됩니다.
+OAuth redirect URI는 기존 OAuth 클라이언트에 등록된 `http://localhost:3000/api/auth/callback`을 재사용합니다. Data Portability scope는 일반 YouTube Data API scope와 같은 승인 요청에 섞지 않습니다. `.env.local`은 Git에서 제외됩니다.

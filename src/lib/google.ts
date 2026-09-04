@@ -22,7 +22,7 @@ export function configuration() {
 }
 
 export function callbackUrl() {
-  return `${configuration().baseUrl}/api/auth/portability/callback`;
+  return `${configuration().baseUrl}/api/auth/callback`;
 }
 
 export async function exchangeCode(code: string): Promise<TokenResponse> {

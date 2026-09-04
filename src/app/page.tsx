@@ -91,7 +91,7 @@ export default function Home() {
             <Check label="OAuth client secret" ok={status.configured.clientSecret} />
             <Check label="Session secret" ok={status.configured.sessionSecret} />
             <Check label="API key (선택 전달)" ok={status.configured.apiKey} optional />
-            <div className="wide"><span>Callback URL</span><code>{status.configured.baseUrl}/api/auth/portability/callback</code></div>
+            <div className="wide"><span>Callback URL</span><code>{status.configured.baseUrl}/api/auth/callback</code></div>
           </div>
         )}
       </section>
