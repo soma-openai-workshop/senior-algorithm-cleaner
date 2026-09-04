@@ -15,4 +15,20 @@
 
 ## 상태
 
-현재는 문서만 복사한 상태이며 애플리케이션 소스, 패키지 설정, 환경변수와 기존 Git 이력은 포함하지 않았습니다.
+현재 애플리케이션은 제품 본 구현이 아니라 Google Data Portability API의 OAuth, access type, archive initiate와 상태 조회를 실제 호출하기 위한 smoke test입니다. 기존 데모 코드는 포함하지 않았습니다.
+
+## Data Portability smoke test
+
+```bash
+cp .env.example .env.local
+npm install
+npm run dev
+```
+
+`http://localhost:3000`에서 Data Portability 전용 Google OAuth를 연결한 뒤 순서대로 호출합니다.
+
+1. access type 확인
+2. 최근 30일 `myactivity.youtube` 아카이브 요청
+3. 발급된 job ID로 작업 상태 조회
+
+OAuth redirect URI는 `http://localhost:3000/api/auth/portability/callback`입니다. Data Portability scope는 일반 YouTube Data API scope와 같은 승인 요청에 섞지 않습니다. `.env.local`은 Git에서 제외됩니다.
