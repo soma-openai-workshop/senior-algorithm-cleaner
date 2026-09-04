@@ -6,11 +6,11 @@
 
 ```text
 docs/specs/
-├── google-data-ingestion/
-├── youtube-enrichment/
-├── health-content-analysis/
+├── youtube-subscription-ingestion/
+├── channel-video-sampling/
+├── llm-risk-judge/
 ├── channel-factory-analysis/
-├── review-and-actions/
+├── subscription-review-actions/
 └── results-experience/
 ```
 
