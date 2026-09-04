@@ -4,16 +4,25 @@
 
 node_modules/
 .next/
+dist/
+build/
+out/
 coverage/
 playwright-report/
 test-results/
 *.log
 next-env.d.ts
 *.tsbuildinfo
+.vscode/
+.idea/
+*.tmp
+*.swp
 
 *.db
 *.db-shm
 *.db-wal
+data/*
+!data/.gitkeep
 
 # Commit shared Spec Kit skills, ignore any other machine-local agent artifacts.
 .agents/*

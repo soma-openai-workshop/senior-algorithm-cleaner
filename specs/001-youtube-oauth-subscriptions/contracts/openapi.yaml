@@ -1,0 +1,616 @@
+openapi: 3.1.0
+info:
+  title: YouTube Health Check - OAuth and Collection API
+  version: 1.0.0
+  description: |
+    Browser-facing contract for feature 001. All endpoints are same-origin. OAuth tokens and
+    YouTube subscription IDs never appear in a response. Mutation endpoints require both the
+    opaque session cookie and X-CSRF-Token, and reject an Origin different from APP_BASE_URL.
+servers:
+  - url: http://localhost:3000
+paths:
+  /api/session:
+    get:
+      operationId: getSession
+      summary: Create or inspect the current anonymous browser session
+      responses:
+        '200':
+          description: Session and connection state
+          headers:
+            Set-Cookie:
+              description: Opaque HttpOnly session cookie when a session must be created
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionView'
+  /api/oauth/start:
+    post:
+      operationId: startOAuth
+      summary: Create a one-time OAuth attempt and return its Google authorization URL
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: Return the one-time Google authorization URL for explicit client navigation
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [authorizationUrl]
+                properties:
+                  authorizationUrl:
+                    type: string
+                    format: uri
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/oauth/callback:
+    get:
+      operationId: completeOAuth
+      summary: Validate state, exchange the authorization code, and redirect to the app
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: code
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: error
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '303':
+          description: |
+            Redirect to /collect on success or to /?oauth=<safe-error-code> on denial/failure.
+            The authorization code and state are never copied to the redirect URL.
+          headers:
+            Location:
+              required: true
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+  /api/collection-jobs:
+    post:
+      operationId: createCollectionJob
+      summary: Create a job or return the current active job for this session
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                restartInterrupted:
+                  type: boolean
+                  default: false
+                  description: Atomically abandon an interrupted job and create a new one
+      responses:
+        '201':
+          description: A new job was created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobView'
+        '200':
+          description: The current active job was returned without creating a duplicate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobView'
+        '401':
+          $ref: '#/components/responses/ReauthRequired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/collection-jobs/{jobId}:
+    get:
+      operationId: getCollectionJob
+      summary: Return progress for an owned, non-expired collection job
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+      responses:
+        '200':
+          description: Current status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobView'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '410':
+          $ref: '#/components/responses/Expired'
+  /api/collection-jobs/{jobId}/advance:
+    post:
+      operationId: advanceCollectionJob
+      summary: Claim a short lease and process a bounded collection slice
+      description: |
+        Returns within 20 seconds or the configured provider-call budget. Repeating this call is
+        safe: persisted checkpoints and a lease prevent duplicate page or batch processing.
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: Updated job state after the bounded slice
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobView'
+        '401':
+          $ref: '#/components/responses/ReauthRequired'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Another request holds a valid job lease
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ErrorView'
+                  - type: object
+                    properties:
+                      code:
+                        const: already_advancing
+                      retryAfterMs:
+                        type: integer
+                        minimum: 100
+        '410':
+          $ref: '#/components/responses/Expired'
+  /api/collection-jobs/{jobId}/results:
+    get:
+      operationId: getCollectionResults
+      summary: Return an owned job's channel preparation results without subscription IDs
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+      responses:
+        '200':
+          description: Paginated channel results and limitations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionResultsView'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '410':
+          $ref: '#/components/responses/Expired'
+  /api/collection-jobs/{jobId}/subscriptions:
+    get:
+      operationId: getCollectedSubscriptions
+      summary: Return every collected subscription without the provider subscription ID
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+      responses:
+        '200':
+          description: Paginated safe subscription list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionListView'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '410':
+          $ref: '#/components/responses/Expired'
+  /api/connection:
+    delete:
+      operationId: disconnect
+      summary: Revoke the Google token where possible and irreversibly delete local session data
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: Local deletion completed; external revocation status is reported separately
+          headers:
+            Set-Cookie:
+              description: Expires the opaque session cookie
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [localDataDeleted, externalRevocation]
+                properties:
+                  localDataDeleted:
+                    const: true
+                  externalRevocation:
+                    type: string
+                    enum: [revoked, not_connected, failed]
+                  manualRevocationUrl:
+                    type: [string, 'null']
+                    format: uri
+        '403':
+          $ref: '#/components/responses/Forbidden'
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sac_session
+  parameters:
+    CsrfToken:
+      name: X-CSRF-Token
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 32
+    JobId:
+      name: jobId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    InvalidRequest:
+      description: Input or callback validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorView'
+    Forbidden:
+      description: Session, Origin, or CSRF validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorView'
+    ReauthRequired:
+      description: OAuth access is absent, expired, or revoked
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ErrorView'
+              - type: object
+                properties:
+                  code:
+                    const: reauth_required
+    NotFound:
+      description: The resource does not exist or belongs to another session
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ErrorView'
+              - type: object
+                properties:
+                  code:
+                    const: not_found
+    Expired:
+      description: The resource passed its retention deadline
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ErrorView'
+              - type: object
+                properties:
+                  code:
+                    const: expired
+  schemas:
+    SessionView:
+      type: object
+      additionalProperties: false
+      required: [connected, csrfToken]
+      properties:
+        connected:
+          type: boolean
+        csrfToken:
+          type: string
+        connectionExpiresAt:
+          type: [string, 'null']
+          format: date-time
+        activeJobId:
+          type: [string, 'null']
+          format: uuid
+    JobStatus:
+      type: string
+      enum:
+        - queued
+        - collecting_subscriptions
+        - collecting_channels
+        - collecting_uploads
+        - classifying_candidates
+        - interrupted
+        - completed
+        - partial
+        - failed
+        - abandoned
+    JobView:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - status
+        - phase
+        - progress
+        - updatedAt
+        - expiresAt
+        - nextAction
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/JobStatus'
+        phase:
+          type: string
+          enum:
+            - collecting_subscriptions
+            - collecting_channels
+            - collecting_uploads
+            - classifying_candidates
+            - finalizing
+        progress:
+          $ref: '#/components/schemas/ProgressView'
+        updatedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: [string, 'null']
+          format: date-time
+        nextAction:
+          type: string
+          enum: [advance, wait, reconnect, view_results, restart]
+        limitations:
+          type: array
+          items:
+            $ref: '#/components/schemas/LimitationView'
+    ProgressView:
+      type: object
+      additionalProperties: false
+      required: [discovered, processed, succeeded, failed, excluded, duplicates]
+      properties:
+        discovered:
+          type: integer
+          minimum: 0
+        processed:
+          type: integer
+          minimum: 0
+        succeeded:
+          type: integer
+          minimum: 0
+        failed:
+          type: integer
+          minimum: 0
+        excluded:
+          type: integer
+          minimum: 0
+        duplicates:
+          type: integer
+          minimum: 0
+    CollectionResultsView:
+      type: object
+      additionalProperties: false
+      required: [job, channels, nextCursor, summary]
+      properties:
+        job:
+          $ref: '#/components/schemas/JobView'
+        channels:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChannelPreparationView'
+        nextCursor:
+          type: [string, 'null']
+        summary:
+          type: object
+          additionalProperties: false
+          required: [subscriptions, channelsReady, candidates, failures]
+          properties:
+            subscriptions:
+              type: integer
+              minimum: 0
+            channelsReady:
+              type: integer
+              minimum: 0
+            candidates:
+              type: integer
+              minimum: 0
+            failures:
+              type: integer
+              minimum: 0
+    SubscriptionListView:
+      type: object
+      additionalProperties: false
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubscriptionView'
+        nextCursor:
+          type: [string, 'null']
+    SubscriptionView:
+      type: object
+      additionalProperties: false
+      required: [channelId, title, description, thumbnailUrl, subscribedAt]
+      description: The provider subscription relation ID is intentionally absent.
+      properties:
+        channelId:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        thumbnailUrl:
+          type: [string, 'null']
+          format: uri
+        subscribedAt:
+          type: [string, 'null']
+          format: date-time
+    ChannelPreparationView:
+      type: object
+      additionalProperties: false
+      required:
+        - channelId
+        - title
+        - description
+        - thumbnailUrl
+        - subscribedAt
+        - detailStatus
+        - uploadSample
+        - classification
+        - limitations
+      properties:
+        channelId:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        thumbnailUrl:
+          type: [string, 'null']
+          format: uri
+        subscribedAt:
+          type: [string, 'null']
+          format: date-time
+        detailStatus:
+          type: string
+          enum: [ready, unavailable, invalid]
+        uploadSample:
+          $ref: '#/components/schemas/UploadSampleView'
+        classification:
+          oneOf:
+            - $ref: '#/components/schemas/ClassificationView'
+            - type: 'null'
+        limitations:
+          type: array
+          items:
+            $ref: '#/components/schemas/LimitationView'
+    UploadSampleView:
+      type: object
+      additionalProperties: false
+      required: [status, scanned, retained, excluded, truncated]
+      properties:
+        status:
+          type: string
+          enum: [pending, collecting, complete, truncated, failed]
+        scanned:
+          type: integer
+          minimum: 0
+          maximum: 500
+        retained:
+          type: integer
+          minimum: 0
+        excluded:
+          type: integer
+          minimum: 0
+        truncated:
+          type: boolean
+    ClassificationView:
+      type: object
+      additionalProperties: false
+      required: [isCandidate, policyVersion, sampleStatus, matchedSignals]
+      properties:
+        isCandidate:
+          type: boolean
+        policyVersion:
+          const: health-candidate-policy-v1
+        sampleStatus:
+          type: string
+          enum: [sufficient, limited, no_uploads]
+        matchedSignals:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [category, termId, source]
+            properties:
+              category:
+                type: string
+              termId:
+                type: string
+              source:
+                type: string
+                enum: [channel_title, channel_description, video_title, video_description]
+              videoId:
+                type: string
+    LimitationView:
+      type: object
+      additionalProperties: false
+      required: [code, retryable, message]
+      properties:
+        code:
+          type: string
+          enum:
+            - auth_expired
+            - quota_exceeded
+            - provider_temporary
+            - provider_permanent
+            - provider_schema_invalid
+            - channel_unavailable
+            - uploads_unavailable
+            - upload_item_invalid
+            - collection_truncated
+            - internal_interrupted
+        retryable:
+          type: boolean
+        message:
+          type: string
+    ErrorView:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        retryAfterMs:
+          type: integer
+          minimum: 0
