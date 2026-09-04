@@ -524,6 +524,294 @@ button.primary-button {
   margin-top: 28px;
 }
 
+.analysis-section {
+  margin-top: 28px;
+  padding: 38px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+}
+
+.analysis-progress {
+  display: grid;
+  grid-template-columns: auto minmax(220px, 1fr) minmax(220px, 0.8fr);
+  gap: 18px;
+  align-items: center;
+  padding: 24px;
+  background: var(--green-100);
+  border: 1px solid #b7cf91;
+  border-radius: 8px;
+}
+
+.analysis-progress > svg {
+  color: var(--green-700);
+}
+
+.analysis-progress strong {
+  font-size: 23px;
+}
+
+.analysis-progress p {
+  margin: 2px 0 0;
+}
+
+.analysis-progress progress {
+  width: 100%;
+  height: 24px;
+  accent-color: var(--green-700);
+}
+
+.spin {
+  animation: spin 1.2s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.success-banner {
+  min-height: 62px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 20px 0;
+  padding: 14px 18px;
+  color: var(--green-800);
+  background: var(--green-100);
+  border: 1px solid #b7cf91;
+  border-radius: 8px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.risk-results {
+  margin-top: 34px;
+  padding-top: 30px;
+  border-top: 2px solid var(--border);
+}
+
+.risk-results__heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.risk-results__heading h3 {
+  margin: 0;
+  font-size: 32px;
+}
+
+.risk-results__heading > strong {
+  color: var(--green-800);
+  font-size: 21px;
+}
+
+.risk-card-list {
+  display: grid;
+  gap: 18px;
+}
+
+.risk-card {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) 180px;
+  gap: 16px 24px;
+  padding: 24px;
+  background: #fff;
+  border: 2px solid var(--border);
+  border-left-width: 10px;
+  border-radius: 10px;
+}
+
+.risk-card--normal {
+  border-left-color: var(--green-600);
+}
+
+.risk-card--warning {
+  border-left-color: #e29416;
+}
+
+.risk-card--danger,
+.risk-card--unavailable {
+  border-left-color: var(--danger);
+}
+
+.risk-card__select {
+  grid-column: 1 / -1;
+  min-height: 52px;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  width: fit-content;
+  cursor: pointer;
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.risk-card__select input {
+  width: 30px;
+  height: 30px;
+  accent-color: var(--green-700);
+}
+
+.risk-card__identity {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.channel-thumbnail--large {
+  width: 88px;
+  height: 88px;
+  flex: 0 0 auto;
+}
+
+.risk-card__identity h4 {
+  margin: 0 0 8px;
+  font-size: 25px;
+  line-height: 1.35;
+}
+
+.risk-card__score {
+  text-align: right;
+}
+
+.risk-card__score > strong {
+  display: inline-block;
+  margin-left: 12px;
+  font-size: 48px;
+  line-height: 1;
+}
+
+.risk-card__score small {
+  color: var(--muted);
+  font-size: 17px;
+}
+
+.risk-level {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-weight: 800;
+}
+
+.risk-level--normal {
+  color: var(--green-800);
+  background: var(--green-100);
+}
+
+.risk-level--warning {
+  color: #714000;
+  background: var(--warning-surface);
+}
+
+.risk-level--danger,
+.risk-level--unavailable {
+  color: #7a1919;
+  background: #ffe5e5;
+}
+
+.risk-card__subscores {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.risk-card__subscores span {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  background: #f2f4f1;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-size: 18px;
+}
+
+.risk-card__reason {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 16px 18px;
+  color: #372b18;
+  background: #fff8e9;
+  border: 1px solid #e2c891;
+  border-radius: 7px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.unsubscribe-action {
+  position: sticky;
+  bottom: 16px;
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 24px;
+  padding: 16px;
+  background: rgb(255 255 255 / 94%);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  box-shadow: var(--shadow);
+}
+
+.unsubscribe-result {
+  margin: 20px 0 0;
+  padding: 16px 18px;
+  color: var(--green-800);
+  background: var(--green-100);
+  border: 1px solid #b7cf91;
+  border-radius: 7px;
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.modal-backdrop {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(20 27 18 / 58%);
+}
+
+.modal-backdrop .confirm-dialog {
+  position: relative;
+}
+
+.dialog-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  color: var(--text);
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.confirmation-channel-list {
+  max-height: 280px;
+  overflow: auto;
+  margin: 20px 0;
+  padding: 14px 14px 14px 40px;
+  background: #f4f5f3;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-size: 19px;
+  font-weight: 700;
+}
+
 .result-heading {
   display: flex;
   align-items: flex-end;
@@ -745,11 +1033,28 @@ button.primary-button {
   .tile-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+
+  .analysis-progress,
+  .risk-card {
+    grid-template-columns: 1fr;
+  }
+
+  .risk-card__score {
+    text-align: left;
+  }
 }
 
 @media (max-width: 520px) {
   body {
     font-size: 18px;
+  }
+
+  .analysis-section {
+    padding: 24px 18px;
+  }
+
+  .risk-card__subscores {
+    grid-template-columns: 1fr;
   }
 
   .topbar__inner,

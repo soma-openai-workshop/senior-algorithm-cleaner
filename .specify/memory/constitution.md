@@ -1,108 +1,63 @@
 <!--
 Sync Impact Report
-- Version change: template (unratified) -> 1.0.0
-- Added principles:
-  - I. User-Controlled Irreversible Actions
-  - II. Evidence-Bounded Judgement
-  - III. Independent, Versioned Scores
-  - IV. Privacy and API Compliance
-  - V. Specification and Verification First
-- Added sections:
-  - Product and Technical Constraints
-  - Development Workflow and Quality Gates
-- Removed sections: none
-- Follow-up TODOs: none
+- Version change: 3.0.0 -> 3.1.0
+- Breaking changes: one combined 0..100 risk score; two-stage content analysis;
+  factory-like thumbnail judgement; direct context-first delivery without mandatory SpecKit artifacts.
+- Synchronized documents: IMPLEMENTATION_HANDOFF, PRD, ANALYSIS_WORKFLOW, API_DATA_DETAILS.
 -->
-# Senior Algorithm Cleaner Constitution
+# 유튜브 건강검진 Constitution
 
-## Core Principles
+## I. 사용자가 통제하는 구독 해제
 
-### I. User-Controlled Irreversible Actions
+채널은 기본 미선택이어야 한다. 점수로 채널을 자동 선택하거나 자동 구독 해제하지 않는다.
+현재 사용자가 고른 `subscriptionId`만 확인 화면에 올리고, 명시적인 최종 승인 뒤에만
+`subscriptions.delete`를 호출한다. 성공과 실패를 채널별로 보존하고 실패 항목만 재시도한다.
 
-The application MUST NOT preselect channels, unsubscribe automatically, or infer consent from a
-risk score. Every channel checkbox MUST start unselected. Only subscription IDs selected by the
-current user MAY appear in the confirmation dialog, and `subscriptions.delete` MUST run only after
-an explicit final confirmation. The result MUST preserve per-channel success and failure states,
-and retries MUST target failed items only. Analysis and recommendation code MUST remain incapable
-of invoking a write API without a separate, verified confirmation boundary.
+## II. 관찰된 근거만 사용
 
-### II. Evidence-Bounded Judgement
+LLM은 제공된 영상·메타데이터·썸네일에서 관찰한 사실만 반환하며 외부 검색이나 추측을 하지
+않는다. 모든 양수 점수에는 이유와 근거가 있어야 한다. `unknown`, 실패, 0점을 구분한다.
+점수는 위험 신호이지 허위·사기·불법·AI 생성을 확정하는 판정이 아니다.
 
-Every deduction MUST be based on data observed in the current channel or video input and MUST carry
-a human-readable reason. Content-risk deductions MUST include video evidence when available; the
-system MUST NOT fill missing facts with model background knowledge or external searches. Unknown,
-unavailable, and failed states MUST remain distinct from `false` and from a zero deduction. The UI
-MUST expose sample size, unavailable evidence, provider failures, and other limitations. The product
-MUST describe signals as risk or likelihood, never as a definitive finding of falsity, illegality,
-fraud, or AI generation.
+## III. 단일 방향의 버전 점수
 
-### III. Independent, Versioned Scores
+모든 점수는 클수록 위험하다. 콘텐츠 리스크 0..50과 공장형 가능성 0..50을 합산하여 채널 위험도
+0..100을 표시한다. 정책, 프롬프트, JSON schema와 집계식은 버전 관리한다. 결정적 규칙은 같은
+정규화 입력에 항상 같은 결과를 내야 하며, 코드는 LLM의 형식·범위·산식만 검증한다.
 
-Content risk and factory-like likelihood answer different questions and MUST remain separate from
-collection through presentation. They MUST NOT be merged into a composite score or used as a proxy
-for one another. Subscriber count, view count, synthetic-media disclosure, and upload frequency
-MUST NOT affect content risk. Every scoring threshold, normalization rule, prompt, schema, and
-aggregation formula MUST have an explicit version. Rule-based calculations MUST be deterministic
-for the same normalized input and policy version.
+## IV. 분석 계약
 
-### IV. Privacy and API Compliance
+- 표본: 최신 공개 영상 2개 + 최근 1년 공개 영상 중 현재 누적 조회 수 상위 영상 3개. 중복은
+  건너뛰고 가능하면 고유 영상 5개를 채운다. 롱폼·숏폼을 구분하지 않는다.
+- 콘텐츠 0..50: 출처 불명확 0..30, 치료·복약 변경 유도 0..10, 구매 유도 0..10.
+- 콘텐츠는 영상 URL 증거 추출과 증거 JSON 채점이라는 두 번의 독립 LLM 호출로 처리한다.
+- 영상 채널 집계는 `round(최고 영상 0.5 + 성공 영상 평균 0.5)`이다. 비건강 영상도 같은
+  루브릭으로 평가하고 0점 결과를 평균에 포함한다.
+- 공장형 0..50: 최근 90일 5개 연속 업로드 창의 속도·기계적 규칙성 0..10, 선택 영상의
+  `containsSyntheticMedia=true` 1개당 2점(최대 10), 최신 공개 영상 3개 썸네일의 전체적
+  유사도 0..30. 업로드 원점수와 썸네일 0..10 측정 방식은 유지하고 각각 `round(raw/3)`과
+  `raw*3`으로 최종 기여도를 변환한다.
+- Gemini 단계는 증거 추출 → 콘텐츠 채점 → 썸네일 비교 순서로 완전히 분리한다. 각 단계의
+  동시 호출 상한은 `GEMINI_JUDGE_CONCURRENCY`이며 현재 운영값은 8이다.
+- 일시 오류, 429, 5xx, 시간 초과와 잘못된 JSON은 최초 요청을 포함해 최대 3회 시도한다.
 
-OAuth credentials, access tokens, refresh tokens, API keys, and user-specific subscription IDs MUST
-remain server-side and MUST NOT enter logs, client bundles, repositories, LLM prompts, or exported
-demo artifacts. The implementation MUST use official YouTube and Google APIs and MUST NOT scrape
-YouTube, use unofficial transcript endpoints, automate the YouTube interface, or download/separate
-YouTube audiovisual content. Only the minimum data required for an active analysis and its user-
-visible result MAY be retained, with a documented expiry policy and account-disconnect deletion
-path.
+## V. 개인정보와 API 경계
 
-### V. Specification and Verification First
+OAuth 토큰, API 키, 세션·구독 식별자는 서버 밖이나 LLM 입력으로 보내지 않는다. 공식 Google·
+YouTube API와 Gemini 공개 YouTube URL 입력만 사용한다. 스크래핑, 비공식 자막, 영상 다운로드,
+브라우저 자동화는 금지한다. 보관 기간은 `ANALYSIS_TTL_HOURS`로 제한한다.
 
-Each bounded feature MUST have a reviewed Spec Kit specification, implementation plan, and
-dependency-ordered task list before application code is written. Requirements MUST trace to tests:
-pure scoring and normalization rules to unit tests, provider and API contracts to integration tests,
-LLM judge behavior to versioned evaluation fixtures, and selection-confirmation-unsubscribe behavior
-to end-to-end tests. Existing `openai-workshop` demo code MUST NOT be copied, imported, or treated as
-a design reference. Simplicity is mandatory: no service, queue, framework, or persistence layer may
-be introduced without a requirement that the existing single-server design cannot satisfy.
+## VI. 화면과 검증
 
-## Product and Technical Constraints
-
-- The only user-data discovery source in scope is the authenticated user's YouTube subscriptions.
-- The product analyzes health-related YouTube channels and displays `content risk` and
-  `factory-like likelihood`, each from 0 to 100 where a larger number means a stronger warning.
-- Content risk is judged per video by a single LLM judge call against the approved three-part
-  rubric. Code validates structure and arithmetic but MUST NOT reinterpret the model's meaning.
-- Factory-like likelihood is computed per channel by pure TypeScript rules against three approved
-  metadata dimensions: upload pattern, title/description repetition, and synthetic-media disclosure.
-- Synthetic-media disclosure is a production-pattern signal only. An absent disclosure MUST be
-  stored as `unknown`, not `false`.
-- The runtime remains a single TypeScript web application unless a reviewed spec demonstrates a
-  concrete need to change it.
-- Google Data Portability, Takeout, watch history, likes/dislikes, `videos.rate`, recommendation
-  controls, browser automation, and automatic unsubscribe are outside scope.
-
-## Development Workflow and Quality Gates
-
-1. Treat `docs/IMPLEMENTATION_HANDOFF.md` as the product decision source, then `docs/PRD.md`,
-   `docs/ANALYSIS_WORKFLOW.md`, and `docs/API_DATA_DETAILS.md` as successively more detailed
-   contracts. A narrower, newer specification may refine but MUST NOT silently contradict them.
-2. Run `$speckit-specify`, optionally `$speckit-clarify`, then `$speckit-plan` and `$speckit-tasks`
-   for each feature. Resolve every material ambiguity before `$speckit-implement`.
-3. Keep external API clients behind typed adapters. Parse every external response at the boundary
-   and preserve explicit partial, unavailable, and retryable failure states.
-4. A change is complete only when formatting, lint, type checking, relevant unit and integration
-   tests, and affected end-to-end or LLM evaluations pass.
-5. Reviews MUST verify authorization boundaries, score-axis separation, evidence traceability,
-   policy-version provenance, and compliance with all explicit non-goals.
+채널은 분석 불가 우선, 이후 합산 위험도 내림차순으로 정렬한다. 등급은 0..20 `정상`, 21..60
+`경고`, 61..100 `위험`이다. 카드에는 합산 점수, 두 하위 점수와 결정적으로 고른 간결한 한 줄
+이유만 크게 표시하며 상세 근거 UI는 두지 않는다. 규칙은 단위 테스트, API·LLM 계약은 통합
+테스트, 선택·확인·해제는 E2E로 검증한다.
 
 ## Governance
 
-This constitution governs every specification, plan, task, implementation, and review in the
-repository. Amendments require a written rationale, an updated Sync Impact Report, and migration
-notes for affected specs, policies, fixtures, or persisted results. Version changes follow semantic
-versioning: MAJOR for incompatible principle changes or removals, MINOR for new principles or
-materially expanded obligations, and PATCH for non-semantic clarification. Every pull request MUST
-declare whether it complies or identify an approved amendment. Product documentation and feature
-specifications MUST be updated in the same change whenever behavior or contracts change.
+`docs/IMPLEMENTATION_HANDOFF.md`가 제품 결정의 최상위 문서다. 기능 변경은 관련 컨텍스트 문서와
+테스트를 같은 변경에 포함한다. 단일 Next.js·TypeScript·SQLite 구조로 해결할 수 있는 요구에
+별도 서비스나 큐를 추가하지 않는다.
 
-**Version**: 1.0.0 | **Ratified**: 2026-09-04 | **Last Amended**: 2026-09-04
+**Version**: 3.1.0 | **Ratified**: 2026-09-04 | **Last Amended**: 2026-09-04

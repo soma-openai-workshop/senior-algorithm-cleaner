@@ -25,6 +25,8 @@ const serverEnvSchema = z.object({
     .max(24 * 30)
     .default(24),
   GEMINI_JUDGE_CONCURRENCY: z.coerce.number().int().min(1).max(8).default(2),
+  GEMINI_API_KEY: z.string().default(''),
+  GEMINI_JUDGE_MODEL: z.string().min(1).default('gemini-3.7-flash'),
 })
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>

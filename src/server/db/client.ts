@@ -8,7 +8,12 @@ export type AppDatabase = Database.Database
 
 type GlobalDatabase = typeof globalThis & { __sacDatabase?: AppDatabase }
 
-const migrationFiles = ['001_oauth_collection.sql'] as const
+const migrationFiles = [
+  '001_oauth_collection.sql',
+  '002_analysis_pipeline.sql',
+  '003_unsubscribe_confirmations.sql',
+  '004_factory_weighting.sql',
+] as const
 
 export function migrateDatabase(database: AppDatabase, migrationRoot = migrationDirectory()): void {
   database.pragma('foreign_keys = ON')

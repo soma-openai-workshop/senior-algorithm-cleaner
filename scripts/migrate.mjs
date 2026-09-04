@@ -18,16 +18,21 @@ try {
       applied_at TEXT NOT NULL
     )
   `)
-  const migrationPath = path.join(
-    process.cwd(),
-    'src/server/db/migrations/001_oauth_collection.sql',
-  )
-  if (!database.prepare('SELECT 1 FROM schema_migrations WHERE version = 1').get()) {
+  const migrationFiles = [
+    '001_oauth_collection.sql',
+    '002_analysis_pipeline.sql',
+    '003_unsubscribe_confirmations.sql',
+    '004_factory_weighting.sql',
+  ]
+  for (const [index, filename] of migrationFiles.entries()) {
+    const version = index + 1
+    if (database.prepare('SELECT 1 FROM schema_migrations WHERE version = ?').get(version)) continue
+    const migrationPath = path.join(process.cwd(), 'src/server/db/migrations', filename)
     database.transaction(() => {
       database.exec(fs.readFileSync(migrationPath, 'utf8'))
       database
-        .prepare('INSERT INTO schema_migrations (version, applied_at) VALUES (1, ?)')
-        .run(new Date().toISOString())
+        .prepare('INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)')
+        .run(version, new Date().toISOString())
     })()
   }
   console.info('Database migration complete.')

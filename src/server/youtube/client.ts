@@ -4,7 +4,9 @@ import { providerErrorFromResponse } from './errors'
 import {
   normalizeChannelsResponse,
   normalizePlaylistItemsResponse,
+  normalizeSearchVideosResponse,
   normalizeSubscriptionsPage,
+  normalizeVideosDetailsResponse,
 } from './schemas'
 
 const YOUTUBE_API = 'https://www.googleapis.com/youtube/v3'
@@ -78,4 +80,57 @@ export async function listPlaylistItemsPage(
     if (error instanceof AppError) throw error
     throw new AppError('provider_schema_invalid')
   }
+}
+
+export async function searchPopularVideos(
+  accessToken: string,
+  channelId: string,
+  publishedAfter: Date,
+  providerFetch: typeof fetch = fetch,
+) {
+  const url = new URL(`${YOUTUBE_API}/search`)
+  url.searchParams.set('part', 'id')
+  url.searchParams.set('channelId', channelId)
+  url.searchParams.set('type', 'video')
+  url.searchParams.set('order', 'viewCount')
+  url.searchParams.set('publishedAfter', publishedAfter.toISOString())
+  url.searchParams.set('maxResults', '10')
+  try {
+    return normalizeSearchVideosResponse(await getJson(url, accessToken, providerFetch))
+  } catch (error) {
+    if (error instanceof AppError) throw error
+    throw new AppError('provider_schema_invalid')
+  }
+}
+
+export async function listVideosBatch(
+  accessToken: string,
+  videoIds: string[],
+  providerFetch: typeof fetch = fetch,
+) {
+  if (videoIds.length === 0 || videoIds.length > 50) throw new AppError('invalid_request')
+  const url = new URL(`${YOUTUBE_API}/videos`)
+  url.searchParams.set('part', 'snippet,contentDetails,statistics,status')
+  url.searchParams.set('id', videoIds.join(','))
+  try {
+    return normalizeVideosDetailsResponse(await getJson(url, accessToken, providerFetch))
+  } catch (error) {
+    if (error instanceof AppError) throw error
+    throw new AppError('provider_schema_invalid')
+  }
+}
+
+export async function deleteSubscription(
+  accessToken: string,
+  subscriptionId: string,
+  providerFetch: typeof fetch = fetch,
+) {
+  const url = new URL(`${YOUTUBE_API}/subscriptions`)
+  url.searchParams.set('id', subscriptionId)
+  const response = await providerFetch(url, {
+    method: 'DELETE',
+    headers: { authorization: `Bearer ${accessToken}` },
+    signal: AbortSignal.timeout(12_000),
+  })
+  if (!response.ok) throw providerErrorFromResponse(response)
 }

@@ -6,6 +6,7 @@ import { SubscriptionList, type SafeSubscription } from './subscription-list'
 import { ChannelPreparationList, type ChannelPreparation } from './channel-preparation-list'
 import { DisconnectControl } from './disconnect-control'
 import { ProgressPanel, type ProgressJob } from './progress-panel'
+import { AnalysisRunner } from '@/components/analysis/analysis-runner'
 
 type JobView = ProgressJob & {
   id: string
@@ -149,6 +150,9 @@ export function CollectionRunner({ csrfToken }: { csrfToken: string }) {
       )}
       {done && <SubscriptionList items={items} />}
       {done && <ChannelPreparationList items={prepared} />}
+      {done && prepared.some((item) => item.candidate) && job && (
+        <AnalysisRunner collectionJobId={job.id} csrfToken={csrfToken} />
+      )}
       <DisconnectControl csrfToken={csrfToken} />
     </section>
   )

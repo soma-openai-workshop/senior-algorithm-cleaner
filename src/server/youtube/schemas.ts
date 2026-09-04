@@ -180,3 +180,88 @@ export function normalizePlaylistItemsResponse(value: unknown): {
   }
   return { items, excludedCount, nextPageToken: response.nextPageToken ?? null }
 }
+
+const searchVideoItemSchema = z.object({
+  id: z.object({ videoId: z.string().min(1) }),
+})
+
+const searchVideosResponseSchema = z.object({
+  nextPageToken: z.string().min(1).optional(),
+  items: z.array(searchVideoItemSchema),
+})
+
+export function normalizeSearchVideosResponse(value: unknown) {
+  const response = searchVideosResponseSchema.parse(value)
+  return {
+    videoIds: response.items.map((item) => item.id.videoId),
+    nextPageToken: response.nextPageToken ?? null,
+  }
+}
+
+const videoDetailsItemSchema = z.object({
+  id: z.string().min(1),
+  snippet: z.object({
+    channelId: z.string().min(1),
+    title: z.string().default(''),
+    description: z.string().default(''),
+    publishedAt: z.iso.datetime().optional(),
+    thumbnails: z
+      .object({
+        maxres: z.object({ url: z.string() }).optional(),
+        standard: z.object({ url: z.string() }).optional(),
+        high: z.object({ url: z.string() }).optional(),
+        medium: z.object({ url: z.string() }).optional(),
+        default: z.object({ url: z.string() }).optional(),
+      })
+      .optional(),
+  }),
+  contentDetails: z.object({ duration: z.string().optional() }).optional(),
+  statistics: z.object({ viewCount: z.string().regex(/^\d+$/).optional() }).optional(),
+  status: z
+    .object({
+      privacyStatus: z.string().optional(),
+      containsSyntheticMedia: z.boolean().optional(),
+    })
+    .optional(),
+})
+
+const videosDetailsResponseSchema = z.object({ items: z.array(videoDetailsItemSchema) })
+
+export type VideoDetailsRecord = {
+  videoId: string
+  channelId: string
+  title: string
+  description: string
+  publishedAt: string | null
+  duration: string | null
+  viewCount: string | null
+  thumbnailUrl: string | null
+  containsSyntheticMedia: boolean | null
+}
+
+export function normalizeVideosDetailsResponse(value: unknown): VideoDetailsRecord[] {
+  const response = videosDetailsResponseSchema.parse(value)
+  return response.items
+    .filter((item) => item.status?.privacyStatus !== 'private')
+    .map((item) => {
+      const thumbnails = item.snippet.thumbnails
+      const thumbnail =
+        thumbnails?.maxres?.url ??
+        thumbnails?.standard?.url ??
+        thumbnails?.high?.url ??
+        thumbnails?.medium?.url ??
+        thumbnails?.default?.url ??
+        null
+      return {
+        videoId: item.id,
+        channelId: item.snippet.channelId,
+        title: item.snippet.title,
+        description: item.snippet.description,
+        publishedAt: item.snippet.publishedAt ?? null,
+        duration: item.contentDetails?.duration ?? null,
+        viewCount: item.statistics?.viewCount ?? null,
+        thumbnailUrl: thumbnail && httpsUrl.safeParse(thumbnail).success ? thumbnail : null,
+        containsSyntheticMedia: item.status?.containsSyntheticMedia ?? null,
+      }
+    })
+}
