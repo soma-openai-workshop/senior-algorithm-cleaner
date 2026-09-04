@@ -1,25 +1,31 @@
-# 기능별 SDD spec
+# Spec Kit 기능 명세 안내
 
-이 디렉터리에는 기능별로 검토 가능한 명세를 둡니다. PRD의 제품 결정을 반복해서 복사하지 않고 요구사항 ID로 참조합니다.
+Spec Kit이 생성하는 실제 기능 명세는 저장소 루트의 `specs/NNN-<feature-name>/`에 둔다. 이 문서는
+기능 분할과 실행 순서만 정의하며, PRD 내용을 복사하지 않고 `FR-*`, `SR-*`, `AR-*`, `NR-*`
+요구사항 ID를 참조한다.
 
-예정된 기능 경계는 다음과 같습니다.
+## 권장 기능 순서
+
+| 순서 | 기능명 예시 | 핵심 범위 |
+|---:|---|---|
+| 1 | `youtube-oauth-subscriptions` | OAuth, 세션, 구독 전체 수집, 연결 해제 |
+| 2 | `channel-video-sampling` | 채널 보강, 업로드 순회, 건강 후보, 최신·인기 표본 |
+| 3 | `factory-likelihood-engine` | 세 메타데이터 축, 정책 버전, 단위 테스트 |
+| 4 | `video-risk-judge` | Gemini 영상 어댑터, 구조화 출력, 실패·평가 계약 |
+| 5 | `channel-risk-aggregation` | 영상 결과 집계, 이유 중복 제거, 표본 부족 |
+| 6 | `review-unsubscribe-flow` | 결과 UI, 기본 미선택, 확인 모달, 부분 실패 재시도 |
+
+각 기능은 다음 순서로 진행한다.
 
 ```text
-docs/specs/
-├── youtube-subscription-ingestion/
-├── channel-video-sampling/
-├── llm-risk-judge/
-├── channel-factory-analysis/
-├── subscription-review-actions/
-└── results-experience/
+$speckit-specify <기능 설명과 관련 요구사항 ID>
+→ $speckit-clarify (중대한 모호성이 있을 때만)
+→ $speckit-plan
+→ $speckit-tasks
+→ $speckit-analyze
+→ $speckit-implement
 ```
 
-각 기능 디렉터리는 구현 전에 다음 파일을 갖습니다.
-
-| 파일 | 역할 |
-|---|---|
-| `requirements.md` | 범위, 비범위, 요구사항 ID, 테스트 가능한 인수 조건 |
-| `design.md` | 데이터 흐름, 인터페이스, 타입, 실패 처리, 보안과 테스트 설계 |
-| `tasks.md` | 요구사항과 테스트에 연결된 구현 작업 및 완료 조건 |
-
-명세가 검토되기 전에는 해당 기능 구현을 시작하지 않습니다. 태스크 완료는 코드 작성만이 아니라 연결된 lint, typecheck, unit, integration, E2E 또는 eval 검증 통과를 포함합니다.
+명세가 검토되기 전에는 구현하지 않는다. 완료는 코드 작성뿐 아니라 연결된 format, lint,
+typecheck, unit, integration, E2E 또는 LLM eval 통과를 포함한다. `docs/specs/` 아래에 별도
+`requirements.md`·`design.md`·`tasks.md` 체계를 만들지 않는다.

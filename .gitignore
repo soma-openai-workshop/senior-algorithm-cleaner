@@ -1,9 +1,21 @@
-.next/
-node_modules/
+.DS_Store
 .env*
 !.env.example
-*.log
+
+node_modules/
+.next/
+coverage/
 playwright-report/
 test-results/
+*.log
 next-env.d.ts
 *.tsbuildinfo
+
+*.db
+*.db-shm
+*.db-wal
+
+# Commit shared Spec Kit skills, ignore any other machine-local agent artifacts.
+.agents/*
+!.agents/skills/
+!.agents/skills/**
